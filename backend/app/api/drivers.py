@@ -181,20 +181,38 @@ def enroll_driver_face(
                 detail="Multiple faces detected in enrollment frame. Ensure only the driver is in frame."
             )
 
-        # Crop & align face patch
-        face_patch = face_rec_service.extract_and_align_face(frame, lm_result.face_bbox)
-        if face_patch is None:
+        # Extract face crop and evaluate quality
+        crop = face_rec_service.extract_and_align_face(frame, lm_result.face_bbox)
+        if crop is None:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Failed to extract normalized face patch."
+                detail="Failed to crop face region from frame."
             )
 
-        # Generate 128D normalized embedding
-        embedding_vector = face_rec_service.generate_embedding(face_patch)
+        q_eval = face_rec_service.quality_service.evaluate_quality(
+            crop,
+            head_yaw=lm_result.head_yaw if hasattr(lm_result, "head_yaw") else 0.0,
+            head_pitch=lm_result.head_pitch if hasattr(lm_result, "head_pitch") else 0.0,
+        )
+
+        if not q_eval["is_acceptable"]:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Face quality insufficient ({q_eval['quality_label']}, score: {q_eval['quality_score']}). Please capture in brighter, frontal lighting without motion blur."
+            )
+
+        # Align to canonical 112x112 ArcFace patch
+        aligned_patch = face_rec_service.alignment_service.align_face_5points(
+            frame,
+            bbox=lm_result.face_bbox,
+            target_size=(112, 112)
+        )
+
+        # Generate 128D normalized neural embedding
+        embedding_vector = face_rec_service.generate_embedding(aligned_patch)
 
         # Store embedding in DB
         sample_idx = enroll_in.sample_index or 1
-        # Remove previous sample with same index if exists
         db.query(DriverEmbedding).filter(
             DriverEmbedding.driver_id == driver.id,
             DriverEmbedding.sample_index == sample_idx
@@ -204,23 +222,25 @@ def enroll_driver_face(
             driver_id=driver.id,
             sample_index=sample_idx,
             embedding=embedding_vector,
-            quality_score=0.96,
-            algorithm="safedrive-embed-v1"
+            quality_score=q_eval["quality_score"],
+            algorithm="MobileFaceNet-ArcFace-128D"
         )
         db.add(emb_entry)
         db.commit()
 
         log_audit_event(db, current_user.id, "ENROLL_FACE", "driver_embeddings", str(driver.id), {
             "sample_index": sample_idx,
-            "quality_score": 0.96
+            "quality_score": q_eval["quality_score"],
+            "quality_label": q_eval["quality_label"],
+            "algorithm": "MobileFaceNet-ArcFace-128D"
         })
 
         return FaceEnrollmentResponse(
             success=True,
             driver_id=driver.id,
             sample_index=sample_idx,
-            quality_score=0.96,
-            message="Face embedding vector calculated and secured successfully."
+            quality_score=q_eval["quality_score"],
+            message=f"Neural face embedding sample #{sample_idx} enrolled with {q_eval['quality_label']} quality ({q_eval['quality_score']})."
         )
 
     except HTTPException:
@@ -230,3 +250,47 @@ def enroll_driver_face(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Face enrollment processing failed: {str(e)}"
         )
+
+@router.delete("/{driver_id}/face-data", status_code=status.HTTP_200_OK)
+def delete_driver_face_data(
+    driver_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles([UserRole.ADMIN, UserRole.SAFETY_OFFICER]))
+):
+    """
+    Biometric erasure endpoint (GDPR / CCPA compliance).
+    Permanently deletes all mathematical face embeddings associated with the specified driver.
+    """
+    driver = db.query(Driver).filter(Driver.id == driver_id).first()
+    if not driver:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Driver not found.")
+
+    deleted_count = db.query(DriverEmbedding).filter(DriverEmbedding.driver_id == driver_id).delete()
+    db.commit()
+
+    log_audit_event(db, current_user.id, "PURGE_BIOMETRICS", "driver_embeddings", str(driver_id), {
+        "deleted_embeddings_count": deleted_count
+    })
+
+    return {
+        "success": True,
+        "driver_id": driver_id,
+        "deleted_count": deleted_count,
+        "message": f"Successfully purged {deleted_count} biometric embedding record(s) for driver {driver.full_name}."
+    }
+
+@router.get("/{driver_id}/digital-twin")
+def get_driver_digital_twin(
+    driver_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Computes statistical behavioral digital twin baseline for driver across completed trips.
+    Returns INSUFFICIENT_HISTORICAL_DATA if fewer than 3 sessions are available.
+    """
+    from app.services.digital_twin_service import DigitalTwinService
+    twin_data = DigitalTwinService.calculate_driver_digital_twin(db, driver_id)
+    if not twin_data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Driver not found.")
+    return twin_data

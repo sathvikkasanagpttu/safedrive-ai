@@ -146,9 +146,12 @@ def build_telemetry_payload(output, mode_label: str = "LIVE"):
             "captured": output.evidence_captured,
             "url": output.evidence_frame_url
         },
+        "data_source": "LIVE" if mode_label == "LIVE" else "SIMULATED",
+        "disclaimer": "Research and portfolio prototype. Not an automotive-certified safety system.",
         "model_health": output.model_health,
         "system": {
             "status": "LIVE",
+            "data_source": "LIVE" if mode_label == "LIVE" else "SIMULATED",
             "fps": output.fps,
             "latency_ms": output.inference_latency_ms
         },
@@ -160,8 +163,26 @@ def build_telemetry_payload(output, mode_label: str = "LIVE"):
 async def live_monitor_websocket(
     websocket: WebSocket,
     session_id: Optional[str] = Query(None),
-    demo: Optional[bool] = Query(True)
+    demo: Optional[bool] = Query(True),
+    token: Optional[str] = Query(None)
 ):
+    from app.config import settings
+    from app.utils.security import decode_token
+
+    # Authenticate token if provided, or enforce in production
+    authenticated_user = None
+    if token:
+        payload = decode_token(token)
+        if payload and payload.get("type") == "access":
+            authenticated_user = payload.get("sub")
+            logger.info(f"WebSocket client authenticated as user {authenticated_user}")
+        elif settings.ENVIRONMENT == "production":
+            await websocket.close(code=1008, reason="Invalid or expired authentication token")
+            return
+    elif settings.ENVIRONMENT == "production" and not demo:
+        await websocket.close(code=1008, reason="Authentication required for production telemetry stream")
+        return
+
     await manager.connect(websocket)
 
     # Initialize frame pipeline and simulator
@@ -249,7 +270,7 @@ async def live_monitor_websocket(
                                 for ev in output.events_generated:
                                     ev_type_str = ev.get("event_type", "driver_recognized").lower()
                                     sev_str = ev.get("severity", "info").lower()
-                                    db.add(DetectionEvent(
+                                    db_ev = DetectionEvent(
                                         session_id=active_db_session_id,
                                         driver_id=output.identity.driver_id,
                                         event_type=EventType(ev_type_str) if ev_type_str in [e.value for e in EventType] else EventType.DRIVER_RECOGNIZED,
@@ -261,7 +282,26 @@ async def live_monitor_websocket(
                                         evidence_status="PENDING_REVIEW" if output.evidence_captured else "NO_EVIDENCE",
                                         evidence_factors=ev.get("details", {}).get("evidence_factors", []),
                                         risk_contribution=ev.get("details", {}).get("risk_contribution", 0.0)
-                                    ))
+                                    )
+                                    db.add(db_ev)
+                                    db.flush()
+
+                                    # Capture real cryptographic evidence frame
+                                    if output.evidence_captured and frame_bgr is not None:
+                                        try:
+                                            from app.services.evidence_service import EvidenceCaptureService
+                                            cap_service = EvidenceCaptureService()
+                                            ev_rec = cap_service.capture_and_store_frame(
+                                                db=db,
+                                                event_id=db_ev.id,
+                                                session_id=active_db_session_id,
+                                                frame_bgr=frame_bgr,
+                                                retention_days=30
+                                            )
+                                            output.evidence_frame_url = f"/api/evidence/{ev_rec.id}"
+                                        except Exception as ce:
+                                            logger.warning(f"Real evidence frame capture error: {ce}")
+
                                 for al in output.alerts_generated:
                                     db.add(Alert(
                                         session_id=active_db_session_id,

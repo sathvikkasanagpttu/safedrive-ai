@@ -1,13 +1,13 @@
 import os
 from typing import List, Dict, Any
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
+from pydantic import Field, model_validator
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="allow")
 
     PROJECT_NAME: str = "SafeDrive AI"
-    VERSION: str = "1.0.0"
+    VERSION: str = "3.0.0"
     API_V1_STR: str = "/api"
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
@@ -17,6 +17,15 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours for dev/portfolio convenience
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+    @model_validator(mode="after")
+    def validate_production_security(self) -> "Settings":
+        if self.ENVIRONMENT == "production":
+            if self.DEBUG:
+                raise ValueError("CRITICAL SECURITY ERROR: Production deployment must have DEBUG=False.")
+            if "change-in-production" in self.SECRET_KEY or len(self.SECRET_KEY) < 32:
+                raise ValueError("CRITICAL SECURITY ERROR: Production deployment requires a secure, non-default SECRET_KEY of at least 32 characters.")
+        return self
 
     # CORS
     BACKEND_CORS_ORIGINS: List[str] = [

@@ -10,6 +10,9 @@ from app.models.risk import RiskScore, RiskCategory
 from app.models.settings import SystemSettings
 from app.models.audit import AuditLog
 from app.models.model_registry import ModelRegistry
+from app.models.evidence import EvidenceRecord
+from app.models.event_graph import EventGraphNode, EventGraphEdge
+from app.models.evaluation import EvaluationDataset, EvaluationRun
 
 __all__ = [
     "User",
@@ -32,4 +35,9 @@ __all__ = [
     "SystemSettings",
     "AuditLog",
     "ModelRegistry",
+    "EvidenceRecord",
+    "EventGraphNode",
+    "EventGraphEdge",
+    "EvaluationDataset",
+    "EvaluationRun",
 ]

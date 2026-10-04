@@ -337,6 +337,30 @@ class ApiClient {
       body: JSON.stringify({ status, notes }),
     });
   }
+
+  // --- SafeDrive 3.0: Digital Twin & Event Graph & Evaluation Lab ---
+  async getDriverDigitalTwin(driverId: number): Promise<any> {
+    return await this.request<any>(`/api/drivers/${driverId}/digital-twin`);
+  }
+
+  async getSessionEventGraph(sessionId: number | string): Promise<any> {
+    return await this.request<any>(`/api/sessions/${sessionId}/event-graph`);
+  }
+
+  async getEvaluationDatasets(): Promise<any[]> {
+    return await this.request<any[]>("/api/evaluation/datasets");
+  }
+
+  async getEvaluationRuns(): Promise<any[]> {
+    return await this.request<any[]>("/api/evaluation/runs");
+  }
+
+  async runModelEvaluation(payload: { dataset_id: number; model_name: string }): Promise<any> {
+    return await this.request<any>("/api/evaluation/run", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
 }
 
 export const api = new ApiClient();

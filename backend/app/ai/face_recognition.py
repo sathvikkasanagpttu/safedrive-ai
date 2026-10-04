@@ -5,17 +5,22 @@ from collections import deque
 from typing import List, Optional, Tuple, Dict, Any
 from app.ai.base import IdentityResult, BoundingBox
 from app.config import settings
+from app.ai.face_embedding import (
+    FaceQualityService,
+    FaceAlignmentService,
+    FaceEmbeddingService,
+    IdentityVerificationService,
+)
 
 class FaceRecognitionService:
     def __init__(self, embedding_dim: int = 128, history_size: int = 30):
         self.embedding_dim = embedding_dim
-        # Deterministic projection matrix for embedding generation from normalized face patch
-        np.random.seed(42)
-        self.projection_matrix = np.random.randn(64 * 64, self.embedding_dim).astype(np.float32)
-        norms = np.linalg.norm(self.projection_matrix, axis=0, keepdims=True)
-        self.projection_matrix /= np.maximum(norms, 1e-7)
+        self.quality_service = FaceQualityService()
+        self.alignment_service = FaceAlignmentService()
+        self.embedding_service = FaceEmbeddingService(embedding_dim=embedding_dim)
+        self.temporal_service = IdentityVerificationService(history_window=history_size)
 
-        # Sliding window history for temporal stability
+        # Retain deques for backward compatibility
         self.match_history = deque(maxlen=history_size)
         self.quality_history = deque(maxlen=history_size)
 
@@ -97,31 +102,27 @@ class FaceRecognitionService:
         if face.size == 0:
             return None
 
-        face_resized = cv2.resize(face, (64, 64))
-        gray = cv2.cvtColor(face_resized, cv2.COLOR_BGR2GRAY)
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(4, 4))
-        normalized = clahe.apply(gray)
-        return normalized
+        face_resized = cv2.resize(face, (112, 112))
+        return face_resized
 
     def generate_embedding(self, face_patch: np.ndarray) -> List[float]:
+        """
+        Extracts unit-normalized 128D embedding vector using PyTorch MobileFaceNet backbone.
+        """
         patch = face_patch
-        if patch.ndim == 3:
-            if patch.shape[2] == 3:
-                patch = cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY)
-            elif patch.shape[2] == 1:
-                patch = patch[:, :, 0]
-        if patch.shape != (64, 64):
-            patch = cv2.resize(patch, (64, 64))
+        if patch is None or patch.size == 0:
+            return [0.0] * self.embedding_dim
 
-        flat = patch.flatten().astype(np.float32) / 255.0
-        flat -= np.mean(flat)
-        vector = np.dot(flat, self.projection_matrix)
-        norm = np.linalg.norm(vector)
-        if norm > 1e-6:
-            vector = vector / norm
-        else:
-            vector = np.zeros(self.embedding_dim, dtype=np.float32)
-        return [round(float(val), 6) for val in vector]
+        # Ensure 3-channel BGR for neural network
+        if patch.ndim == 2:
+            patch = cv2.cvtColor(patch, cv2.COLOR_GRAY2BGR)
+        elif patch.ndim == 3 and patch.shape[2] == 1:
+            patch = cv2.cvtColor(patch, cv2.COLOR_GRAY2BGR)
+
+        if patch.shape[:2] != (112, 112):
+            patch = cv2.resize(patch, (112, 112))
+
+        return self.embedding_service.generate_embedding(patch)
 
     @staticmethod
     def cosine_similarity(v1: List[float], v2: List[float]) -> float:

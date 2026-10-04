@@ -24,6 +24,8 @@ from app.api.copilot import router as copilot_router
 from app.api.fleet import router as fleet_router
 from app.api.privacy import router as privacy_router
 from app.api.mlops import router as mlops_router
+from app.api.evidence import router as evidence_router
+from app.api.evaluation import router as evaluation_router
 from app.ws.live_monitor import router as ws_router
 
 logger = setup_logging()
@@ -121,6 +123,8 @@ app.include_router(copilot_router) # /api/copilot
 app.include_router(fleet_router)   # /api/fleet
 app.include_router(privacy_router) # /api/privacy
 app.include_router(mlops_router)   # /api/mlops
+app.include_router(evidence_router) # /api/evidence
+app.include_router(evaluation_router, prefix=settings.API_V1_STR) # /api/evaluation
 
 # Include WebSocket Router
 app.include_router(ws_router)

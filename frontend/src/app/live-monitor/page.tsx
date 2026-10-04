@@ -63,6 +63,33 @@ export default function LiveMonitorPage() {
         }
       />
 
+      {/* Data Source & Prototype Disclosure Banner */}
+      {activeMode === "DEMO MODE" ? (
+        <div className="mb-5 px-4 py-3 rounded-lg border border-amber-500/30 bg-amber-500/10 flex items-center justify-between text-xs text-amber-300">
+          <div className="flex items-center gap-2.5">
+            <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>
+              <strong>DEMO SIMULATION ACTIVE:</strong> Emulating vehicle CAN-bus &amp; synthetic driver telemetry for platform evaluation. Toggle <strong>LIVE CAMERA</strong> on the console to stream your actual webcam into the real-time computer vision pipeline.
+            </span>
+          </div>
+          <span className="font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">
+            SYNTHETIC DATA
+          </span>
+        </div>
+      ) : (
+        <div className="mb-5 px-4 py-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 flex items-center justify-between text-xs text-emerald-300">
+          <div className="flex items-center gap-2.5">
+            <Radio className="w-4 h-4 text-emerald-400 shrink-0 animate-pulse" />
+            <span>
+              <strong>OPTICAL INFERENCE ACTIVE:</strong> Streaming video from connected webcam. Live facial landmarks, EAR/PERCLOS, gaze tracking, and neural face recognition executing in real-time.
+            </span>
+          </div>
+          <span className="font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
+            LIVE SENSOR STREAM
+          </span>
+        </div>
+      )}
+
       {/* Main Grid: Stream & Telemetry HUD */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
         {/* Left Column: Video Canvas & HUD (8 cols) */}

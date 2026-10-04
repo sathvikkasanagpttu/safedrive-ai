@@ -40,11 +40,13 @@ services:
     environment:
       - DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-safedrive}
       - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=${SECRET_KEY:-safedrive-super-secret-jwt-key-change-in-production-2026-xyz}
+      - SECRET_KEY=${SECRET_KEY:-safedrive-production-secure-key-32-chars-long-min}
       - ENVIRONMENT=production
       - DEBUG=False
     ports:
       - "8000:8000"
+    volumes:
+      - evidence_data:/app/storage/evidence
     depends_on:
       postgres:
         condition: service_healthy
@@ -86,3 +88,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  evidence_data:

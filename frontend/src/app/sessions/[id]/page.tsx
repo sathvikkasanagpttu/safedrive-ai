@@ -25,6 +25,7 @@ import {
   Clock,
   Gauge,
   ShieldAlert,
+  GitBranch,
 } from "lucide-react";
 
 export default function SessionDetailPage() {
@@ -111,6 +112,11 @@ export default function SessionDetailPage() {
         description={`Driver: ${session.driver?.full_name || "Unassigned"} | Started: ${new Date(session.start_time).toLocaleString()}`}
         action={
           <div className="flex items-center gap-2">
+            <Link href={`/sessions/${session.id}/event-graph`}>
+              <Button size="md" variant="secondary" className="flex items-center gap-1.5">
+                <GitBranch className="w-4 h-4 text-blue-400" /> Causal Event Graph
+              </Button>
+            </Link>
             <a
               href={api.getPdfUrl(session.id)}
               target="_blank"

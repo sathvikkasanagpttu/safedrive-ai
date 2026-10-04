@@ -115,5 +115,25 @@ def list_registered_models(
 def get_ai_health_metrics(
     current_user: User = Depends(get_current_user)
 ):
+    """Returns actual runtime telemetry health. Never fabricates measurements."""
     metrics = _shared_monitor.get_health_metrics()
     return metrics
+
+@router.get("/metrics")
+def get_detailed_mlops_metrics(
+    current_user: User = Depends(get_current_user)
+):
+    """Returns detailed hardware utilization, per-model latency profiles, and frame statistics."""
+    health = _shared_monitor.get_health_metrics()
+    hw = _shared_monitor.get_hardware_telemetry()
+    return {
+        "status": health["overall_status"],
+        "has_runtime_telemetry": health["has_runtime_telemetry"],
+        "pipeline_fps": health["pipeline_fps"],
+        "total_processed_frames": health["total_processed_frames"],
+        "dropped_frames": health["dropped_frames"],
+        "dropped_frames_pct": health["dropped_frames_pct"],
+        "queue_depth": health["queue_depth"],
+        "hardware": hw,
+        "models": health["models"],
+    }

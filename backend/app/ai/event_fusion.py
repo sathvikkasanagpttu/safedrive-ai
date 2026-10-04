@@ -138,10 +138,10 @@ class EventFusionService:
         def create_evidence_payload(ev_type: str, factors: List[str], pts: float):
             nonlocal evidence_captured, evidence_url
             evidence_captured = True
-            evidence_url = f"evidence://session/{session_id or 'live'}/frame_{frame_index}_{ev_type.lower()}.jpg"
+            evidence_url = f"/api/evidence/pending_{frame_index}_{ev_type.lower()}"
             return {
                 "evidence_url": evidence_url,
-                "evidence_status": "PENDING_REVIEW",
+                "evidence_status": "PENDING_CAPTURE",
                 "evidence_factors": factors,
                 "risk_contribution": pts
             }

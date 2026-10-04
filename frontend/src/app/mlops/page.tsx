@@ -181,10 +181,18 @@ export default function MLOpsPage() {
               <div>
                 <div className="text-[11px] text-slate-400 font-medium uppercase tracking-wider">Avg Latency</div>
                 <div className="text-2xl font-bold font-mono text-blue-400">
-                  {(displayHealth.avg_latency_ms ?? 14.2).toFixed(1)}{" "}
-                  <span className="text-xs text-slate-500 font-normal">ms</span>
+                  {displayHealth.avg_latency_ms != null ? (
+                    <>
+                      {displayHealth.avg_latency_ms.toFixed(1)}{" "}
+                      <span className="text-xs text-slate-500 font-normal">ms</span>
+                    </>
+                  ) : (
+                    <span className="text-sm text-slate-500 font-medium">NOT MEASURED</span>
+                  )}
                 </div>
-                <div className="text-[10px] text-slate-500 font-mono mt-0.5">Sub-20ms real-time SLA</div>
+                <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                  {displayHealth.avg_latency_ms != null ? "Hardware benchmark" : "Awaiting stream"}
+                </div>
               </div>
             </div>
 
@@ -195,10 +203,18 @@ export default function MLOpsPage() {
               <div>
                 <div className="text-[11px] text-slate-400 font-medium uppercase tracking-wider">Pipeline Throughput</div>
                 <div className="text-2xl font-bold font-mono text-emerald-400">
-                  {(displayHealth.avg_fps ?? 30).toFixed(0)}{" "}
-                  <span className="text-xs text-slate-500 font-normal">FPS</span>
+                  {displayHealth.avg_fps != null && displayHealth.avg_fps > 0 ? (
+                    <>
+                      {displayHealth.avg_fps.toFixed(0)}{" "}
+                      <span className="text-xs text-slate-500 font-normal">FPS</span>
+                    </>
+                  ) : (
+                    <span className="text-sm text-slate-500 font-medium">STANDBY</span>
+                  )}
                 </div>
-                <div className="text-[10px] text-slate-500 font-mono mt-0.5">Synchronized frame rate</div>
+                <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                  {displayHealth.avg_fps != null && displayHealth.avg_fps > 0 ? "Synchronized stream" : "No active stream"}
+                </div>
               </div>
             </div>
 

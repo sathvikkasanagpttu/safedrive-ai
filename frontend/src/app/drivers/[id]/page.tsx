@@ -24,6 +24,7 @@ import {
   Lock,
   Activity,
   AlertTriangle,
+  Brain,
 } from "lucide-react";
 
 export default function DriverDetailPage() {
@@ -175,6 +176,11 @@ export default function DriverDetailPage() {
         description={`Operator Code: ${driver.driver_code} | License: ${driver.license_number}`}
         action={
           <div className="flex items-center gap-2">
+            <Link href={`/drivers/${driver.id}/digital-twin`}>
+              <Button size="md" variant="secondary" className="flex items-center gap-1.5">
+                <Brain className="w-4 h-4 text-purple-400" /> Behavioral Digital Twin
+              </Button>
+            </Link>
             <Button size="md" variant="primary" onClick={() => { setEnrollModalOpen(true); startEnrollCamera(); }}>
               <Camera className="w-4 h-4 mr-1.5" /> Enroll Face Sample
             </Button>

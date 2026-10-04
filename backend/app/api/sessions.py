@@ -141,3 +141,19 @@ def stop_session(
         "avg_risk": avg_risk
     })
     return session
+
+@router.get("/{session_id}/event-graph")
+def get_session_event_graph(
+    session_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Constructs or retrieves a temporal causal safety graph for a driving session.
+    Represents incidents as nodes and causal relations (PRECEDED, CONTRIBUTED_TO, CO_OCCURRED, ESCALATED, RECOVERED_AFTER) as edges.
+    """
+    from app.services.event_graph_service import EventGraphService
+    graph = EventGraphService.build_or_get_session_graph(db, session_id)
+    if not graph:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Driving session not found.")
+    return graph

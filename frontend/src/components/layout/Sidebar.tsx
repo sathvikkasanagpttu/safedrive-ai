@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   Cpu,
   LockKeyhole,
+  FlaskConical,
 } from "lucide-react";
 
 const navigationItems = [
@@ -30,6 +31,7 @@ const navigationItems = [
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
   { name: "Safety Reports", href: "/reports", icon: FileText },
   { name: "MLOps Models", href: "/mlops", icon: Cpu, badge: "AI" },
+  { name: "Evaluation Lab", href: "/evaluation", icon: FlaskConical, badge: "3.0" },
   { name: "Privacy Center", href: "/privacy", icon: LockKeyhole, badge: "GDPR" },
   { name: "AI Thresholds", href: "/settings", icon: Sliders },
   { name: "Admin Portal", href: "/admin", icon: Shield },

@@ -24,7 +24,8 @@ export function useWebSocket({ mode = "demo", sessionId, onAlert }: UseWebSocket
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const host = process.env.NEXT_PUBLIC_WS_HOST || "127.0.0.1:8000";
-    const url = `${protocol}//${host}/ws/live-monitor?mode=${mode}${sessionId ? `&session_id=${sessionId}` : ""}`;
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const url = `${protocol}//${host}/ws/live-monitor?demo=${mode === "demo"}${sessionId ? `&session_id=${sessionId}` : ""}${token ? `&token=${encodeURIComponent(token)}` : ""}`;
 
     try {
       const ws = new WebSocket(url);
