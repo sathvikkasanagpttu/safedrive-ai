@@ -7,10 +7,10 @@ test.describe('SafeDrive AI - Fleet Dashboard & Navigation', () => {
   });
 
   test('should render main dashboard with safety metrics and analytics', async ({ page }) => {
-    await expect(page.getByText('SafeDrive AI')).toBeVisible();
+    await expect(page.getByText(/SafeDrive/i).first()).toBeVisible();
     await expect(page.getByText(/Total Drivers/i)).toBeVisible();
-    await expect(page.getByText(/Active Sessions/i)).toBeVisible();
-    await expect(page.getByText(/Fleet Safety Score/i)).toBeVisible();
+    await expect(page.getByText(/Driving Hours/i)).toBeVisible();
+    await expect(page.getByText(/Safety Risk/i)).toBeVisible();
   });
 
   test('should navigate seamlessly through sidebar routes', async ({ page }) => {

@@ -22,3 +22,7 @@ frontend/out/
 
 # Uploads
 backend/uploads/
+
+# Test output & reports
+frontend/playwright-report/
+frontend/test-results/
